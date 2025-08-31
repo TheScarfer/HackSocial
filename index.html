@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bee-Healthy Pollen Tracker</title>
+  
+  <!-- External Dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="styles.css">
+  
+  <!-- PWA Meta Tags -->
+  <meta name="theme-color" content="#2e7d32">
+  <meta name="description" content="Track pollen levels, air quality, and UV index to manage your allergies effectively">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1><i class="fas fa-bee"></i> Bee-Healthy</h1>
+      <p>Track pollen levels, air quality, and UV index to manage your allergies effectively</p>
+
+    </header>
+
+    <!-- Notification Area -->
+    <div id="notification" class="notification">
+      <i class="fas fa-info-circle"></i>
+      <div id="notification-text"></div>
+    </div>
+
+    <section class="card location-info">
+      <h2><i class="fas fa-map-marker-alt"></i> Location Information</h2>
+      <p>📍 <strong id="location">Loading...</strong></p>
+      
+      <div class="stat-grid">
+        <div class="stat-item">
+          <i class="fas fa-seedling" style="color: #4CAF50;"></i>
+          <div class="stat-value" id="pollen-level">Loading...</div>
+          <div class="stat-label">Pollen Level</div>
+        </div>
+        
+        <div class="stat-item">
+          <i class="fas fa-wind" style="color: #2196F3;"></i>
+          <div class="stat-value" id="aqi">Loading...</div>
+          <div class="stat-label">Air Quality</div>
+        </div>
+        
+        <div class="stat-item">
+          <i class="fas fa-sun" style="color: #FF9800;"></i>
+          <div class="stat-value" id="uv-index">Loading...</div>
+          <div class="stat-label">UV Index</div>
+        </div>
+        
+        <div class="stat-item">
+          <i class="fas fa-temperature-high" style="color: #F44336;"></i>
+          <div class="stat-value" id="temperature">Loading...</div>
+          <div class="stat-label">Temperature</div>
+        </div>
+      </div>
+      
+      <p>🌱 Main Allergen: <strong id="main-allergen">Loading...</strong></p>
+      
+      <div class="action-buttons">
+        <button class="btn btn-primary" onclick="app.refreshData()">
+          <i class="fas fa-sync-alt"></i> Refresh Data
+        </button>
+        <button class="btn btn-secondary" id="location-btn" onclick="app.detectUserLocation()">
+          <i class="fas fa-location-arrow"></i> Use My Location
+        </button>
+        <button class="btn" onclick="app.showHelp()" style="background: #f5f5f5;">
+          <i class="fas fa-question-circle"></i> Help
+        </button>
+      </div>
+      <div id="location-status" class="location-status"></div>
+    </section>
+
+    <div class="two-column">
+      <section class="card">
+        <h2><i class="fas fa-calendar-alt"></i> 7-Day Forecast</h2>
+        <ul id="forecast-list">
+          <li class="loading"><span class="loading-spinner"></span> Loading forecast...</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2><i class="fas fa-lightbulb"></i> Allergy Tips</h2>
+        <ul>
+          <li>Wear a mask outdoors when pollen levels are high</li>
+          <li>Keep windows closed during high pollen seasons</li>
+          <li>Change clothes after being outside for extended periods</li>
+          <li>Use air purifiers with HEPA filters indoors</li>
+          <li>Check pollen levels before planning outdoor activities</li>
+          <li>Apply sunscreen when UV index is 3 or higher</li>
+          <li>Shower before bed to remove pollen from hair and skin</li>
+          <li>Consider allergy medication before symptoms begin</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="two-column">
+      <section class="card">
+        <h2><i class="fas fa-microscope"></i> Current Pollen Breakdown</h2>
+        <div id="pollen-breakdown">
+          <div class="loading"><span class="loading-spinner"></span> Loading pollen data...</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><i class="fas fa-wind"></i> Air Quality Details</h2>
+        <div id="air-quality-details">
+          <div class="loading"><span class="loading-spinner"></span> Loading air quality data...</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Pollen Levels Chart -->
+    <section class="card full-width">
+      <h2><i class="fas fa-chart-line"></i> Pollen Levels Over Time</h2>
+      <div class="chart-controls">
+        <button class="chart-btn active" data-view="pollen">
+          <i class="fas fa-seedling"></i> Pollen Levels
+        </button>
+        <button class="chart-btn" data-view="air">
+          <i class="fas fa-wind"></i> Air Quality
+        </button>
+        <button class="chart-btn" data-view="combined">
+          <i class="fas fa-layer-group"></i> Combined View
+        </button>
+        <button class="chart-btn" data-view="uv">
+          <i class="fas fa-sun"></i> UV Index
+        </button>
+        <select class="chart-btn" id="chart-range">
+          <option value="24">Last 24 Hours</option>
+          <option value="72" selected>Last 3 Days</option>
+          <option value="168">Last Week</option>
+        </select>
+      </div>
+      <div class="chart-container">
+        <canvas id="pollenChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Pollen Calendar Section -->
+    <section class="card full-width">
+      <h2><i class="fas fa-calendar-day"></i> Pollen Season Calendar</h2>
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <button class="calendar-nav-btn" onclick="app.previousMonth()">
+            <i class="fas fa-chevron-left"></i>
+          </button>
+          <h3 id="calendar-month-year">Loading...</h3>
+          <button class="calendar-nav-btn" onclick="app.nextMonth()">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+        <div class="calendar-grid">
+          <div class="calendar-weekdays">
+            <div>Sun</div>
+            <div>Mon</div>
+            <div>Tue</div>
+            <div>Wed</div>
+            <div>Thu</div>
+            <div>Fri</div>
+            <div>Sat</div>
+          </div>
+          <div id="calendar-days" class="calendar-days">
+            <!-- Calendar days will be populated by JavaScript -->
+          </div>
+        </div>
+        <div class="calendar-legend">
+          <div class="legend-item">
+            <span class="legend-color low"></span>
+            <span>Low Pollen</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color moderate"></span>
+            <span>Moderate Pollen</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color high"></span>
+            <span>High Pollen</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color very-high"></span>
+            <span>Very High Pollen</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Action Buttons -->
+    <div class="two-column">
+      <section class="card">
+        <h2><i class="fas fa-bell"></i> Notifications</h2>
+        <p>Get alerts when pollen levels are high in your area.</p>
+        <div>
+          <label>
+            <input type="checkbox" id="notify-high-pollen"> Notify me when pollen is high
+          </label>
+        </div>
+        <div style="margin-top: 10px;">
+          <button class="btn btn-primary" onclick="app.testNotification()">
+            <i class="fas fa-bell"></i> Test Notification
+          </button>
+          <button class="btn btn-secondary" onclick="app.requestNotificationPermission()" style="margin-left: 10px;">
+            <i class="fas fa-cog"></i> Enable Browser Notifications
+          </button>
+        </div>
+        <div id="notification-status" style="margin-top: 10px; font-size: 0.9rem; color: var(--text-light);">
+          <!-- Notification status will be shown here -->
+        </div>
+      </section>
+
+      <section class="card">
+        <h2><i class="fas fa-share-alt"></i> Share Report</h2>
+        <p>Share current conditions with others.</p>
+        <div>
+          <button class="btn" onclick="app.shareReport('facebook')" style="background: #4267B2; color: white;">
+            <i class="fab fa-facebook"></i> Facebook
+          </button>
+          <button class="btn" onclick="app.shareReport('twitter')" style="background: #1DA1F2; color: white;">
+            <i class="fab fa-twitter"></i> Twitter
+          </button>
+          <button class="btn" onclick="app.printReport()">
+            <i class="fas fa-print"></i> Print Report
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      <p>Bee-Healthy Pollen Tracker &copy; 2023 | Data provided by Open-Meteo</p>
+      <p>This information is for educational purposes only and should not replace professional medical advice.</p>
+    </footer>
+  </div>
+
+  <!-- Help Modal -->
+  <div id="helpModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="app.closeHelp()">&times;</span>
+      <h2><i class="fas fa-question-circle"></i> Bee-Healthy Help Guide</h2>
+      <h3>Understanding Pollen Levels</h3>
+      <p>Pollen levels are measured in grains per cubic meter of air:</p>
+      <ul>
+        <li><span class="low">Low</span>: 0-9 grains/m³ - Minimal impact for most people</li>
+        <li><span class="moderate">Moderate</span>: 10-49 grains/m³ - Symptoms possible for sensitive individuals</li>
+        <li><span class="high">High</span>: 50-499 grains/m³ - Symptoms likely for sensitive individuals</li>
+        <li><span class="high">Very High</span>: 500+ grains/m³ - Symptoms affect most sensitive individuals</li>
+      </ul>
+      
+      <h3>Using the Charts</h3>
+      <p>Switch between different data views using the chart controls. Hover over data points to see exact values.</p>
+      
+      <h3>Location Services</h3>
+      <p>For the most accurate data, allow location access. Your data is not stored on our servers.</p>
+      
+      <button class="btn btn-primary" onclick="app.closeHelp()">Got it!</button>
+    </div>
+  </div>
+
+  <!-- Pollen Info Modal -->
+  <div id="pollenInfoModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="app.hidePollenInfo()">&times;</span>
+      <h2 id="pollenInfoTitle"></h2>
+      <div id="pollenInfoText"></div>
+      <div id="pollenSeasonInfo" style="margin-top: 15px; padding: 10px; background: #f9f9f9; border-radius: 8px;"></div>
+    </div>
+  </div>
+
+
+
+  <!-- Custom JavaScript -->
+  <script src="script.js"></script>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('Service Worker registered successfully:', registration);
+          })
+          .catch((error) => {
+            console.log('Service Worker registration failed:', error);
+          });
+      });
+    }
+  </script>
+</body>
+</html>
